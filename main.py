@@ -1,4 +1,5 @@
 import time
+import logging
 from datetime import datetime, timezone
 
 from config import COINS, TIMEFRAMES
@@ -8,12 +9,24 @@ from alert_engine import AlertEngine
 from message_builder import build_message
 from telegram_sender import send_telegram
 
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)s | %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S"
+)
+
+logger = logging.getLogger(__name__)
+
+
 engine = AlertEngine()
+
 
 print("=" * 50)
 print("🚀 Crypto RSI Scanner Started")
 print(f"Monitoring {len(COINS)} coins...")
 print("=" * 50)
+
 
 while True:
 
@@ -45,6 +58,9 @@ while True:
                     rsi
                 )
 
+                logger.info(
+                    f"{symbol} {timeframe} alert status: {alert}"
+                )
 
                 if alert:
 
@@ -64,7 +80,9 @@ while True:
 
             except Exception as e:
 
-                print(f"❌ Error scanning {symbol} {timeframe}: {e}")
+                logger.error(
+                    f"Error scanning {symbol} {timeframe}: {e}"
+                )
 
         print()
 
