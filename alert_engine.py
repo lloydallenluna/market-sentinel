@@ -1,3 +1,10 @@
+import json
+import os
+
+
+STATE_FILE = "alert_state.json"
+
+
 class AlertEngine:
 
     OVERBOUGHT = 70
@@ -6,11 +13,37 @@ class AlertEngine:
     OVERSOLD = 30
     WATCH_OVERSOLD = 35
 
-    def __init__(self):
-        # Stores current alert state per coin/timeframe
-        self.states = {}
 
-    def determine_state(self, rsi):
+    def __init__(self):
+
+        self.states = self.load_states()
+
+
+    def load_states(self):
+
+        if os.path.exists(STATE_FILE):
+
+            try:
+                with open(STATE_FILE, "r") as file:
+                    return json.load(file)
+
+            except Exception:
+                return {}
+
+        return {}
+
+
+    def save_states(self):
+
+        with open(STATE_FILE, "w") as file:
+            json.dump(
+                self.states,
+                file,
+                indent=4
+            )
+
+
+    def get_state(self, rsi):
 
         if rsi >= self.OVERBOUGHT:
             return "OVERBOUGHT"
@@ -32,85 +65,50 @@ class AlertEngine:
 
         key = f"{symbol}_{timeframe}"
 
-        new_state = self.determine_state(rsi)
+        new_state = self.get_state(rsi)
 
-        old_state = self.states.get(key)
+        previous_state = self.states.get(key)
 
 
-        # First time seeing this coin/timeframe
-        if old_state is None:
+        if previous_state is None:
 
             self.states[key] = new_state
+            self.save_states()
 
             if new_state == "OVERBOUGHT":
                 return "CONFIRMED_OVERBOUGHT"
 
-            if new_state == "WATCH_OVERBOUGHT":
+            elif new_state == "WATCH_OVERBOUGHT":
                 return "WATCH_OVERBOUGHT"
 
-            if new_state == "OVERSOLD":
+            elif new_state == "OVERSOLD":
                 return "CONFIRMED_OVERSOLD"
 
-            if new_state == "WATCH_OVERSOLD":
+            elif new_state == "WATCH_OVERSOLD":
                 return "WATCH_OVERSOLD"
 
             return None
 
 
-        # No change
-        if old_state == new_state:
+        if previous_state == new_state:
             return None
 
 
-        # ----------------------------
-        # MOVING INTO OVERSOLD AREA
-        # ----------------------------
-
-        if new_state == "WATCH_OVERSOLD":
-
-            if old_state == "NORMAL":
-                self.states[key] = new_state
-                return "WATCH_OVERSOLD"
-
-
-        if new_state == "OVERSOLD":
-
-            if old_state in [
-                "NORMAL",
-                "WATCH_OVERSOLD"
-            ]:
-                self.states[key] = new_state
-                return "CONFIRMED_OVERSOLD"
-
-
-        # ----------------------------
-        # MOVING INTO OVERBOUGHT AREA
-        # ----------------------------
-
-        if new_state == "WATCH_OVERBOUGHT":
-
-            if old_state == "NORMAL":
-                self.states[key] = new_state
-                return "WATCH_OVERBOUGHT"
+        self.states[key] = new_state
+        self.save_states()
 
 
         if new_state == "OVERBOUGHT":
+            return "CONFIRMED_OVERBOUGHT"
 
-            if old_state in [
-                "NORMAL",
-                "WATCH_OVERBOUGHT"
-            ]:
-                self.states[key] = new_state
-                return "CONFIRMED_OVERBOUGHT"
+        if new_state == "WATCH_OVERBOUGHT":
+            return "WATCH_OVERBOUGHT"
 
+        if new_state == "OVERSOLD":
+            return "CONFIRMED_OVERSOLD"
 
-        # ----------------------------
-        # RESET WHEN RSI RETURNS NORMAL
-        # ----------------------------
-
-        if new_state == "NORMAL":
-
-            self.states[key] = "NORMAL"
+        if new_state == "WATCH_OVERSOLD":
+            return "WATCH_OVERSOLD"
 
 
         return None
