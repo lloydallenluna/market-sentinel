@@ -1,16 +1,25 @@
 # Python cache
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
 
 # Environment variables
 .env
+.env.*
 
 # Virtual environment
 venv/
 env/
+.venv/
 
 # IDE files
 .vscode/
+.idea/
+
+# Operating system files
+.DS_Store
+Thumbs.db
 
 # Screenshots / personal files
 screenshot/
